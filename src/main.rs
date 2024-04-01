@@ -6,9 +6,9 @@ use std::{
 
 use nix::{libc::SIGINT, sys::signal};
 
-use crate::packet::BlePacket;
+use crate::ble_sniffer::BlePacket;
 
-mod packet;
+mod ble_sniffer;
 
 static STOP_REQUEST: AtomicBool = AtomicBool::new(false);
 
@@ -17,7 +17,7 @@ fn main() {
     let (this_tx, thread_rx) = mpsc::channel::<String>();
     let (thread_tx, this_rx) = mpsc::channel::<BlePacket>();
     let thread_handle = thread::spawn(move || {
-        packet::analyze_serial_packets("/dev/ttyUSB0", thread_tx, &thread_rx)
+        ble_sniffer::analyze_serial_packets("/dev/ttyUSB0", thread_tx, &thread_rx)
     });
     loop {
         thread::sleep(Duration::from_secs(1));
