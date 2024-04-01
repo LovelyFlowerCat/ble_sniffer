@@ -5,6 +5,8 @@ use std::{
 };
 
 // Author: CYY 3/30/2024
+// Version: V1.0
+pub const SNIFFER_VERSION: &str = "V1.0";
 // Hardware: MCU: Nordic NRF52832 Board: RF-DG-32B
 // Firmware: j-link-ob-sam3u128-v2-nordicsemi-170724.bin
 // Firmware link: https://nsscprodmedia.blob.core.windows.net/prod/software-and-other-downloads/dev-kits/nrf5x-dk-files/j-link-ob-sam3u128-v2-nordicsemi-170724.bin

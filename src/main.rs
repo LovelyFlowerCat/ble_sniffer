@@ -1,10 +1,14 @@
 use std::{
+    io::{stdin, Read},
     sync::{atomic::AtomicBool, mpsc},
     thread,
     time::Duration,
 };
 
-use nix::{libc::SIGINT, sys::signal};
+use nix::{
+    libc::{read, SIGINT},
+    sys::signal,
+};
 
 use crate::ble_sniffer::BlePacket;
 
@@ -13,11 +17,34 @@ mod ble_sniffer;
 static STOP_REQUEST: AtomicBool = AtomicBool::new(false);
 
 fn main() {
+    let mut serial_path = String::new();
+    println!("Please input serial path (e.g. /dev/ttyUSB0): ");
+    loop {
+        match std::io::stdin().read_line(&mut serial_path) {
+            Ok(_) => {
+                serial_path = serial_path.replace("\r", "").replace("\n", "");
+                match serialport::new(serial_path.as_str(), 460800).open() {
+                    Ok(_) => {
+                        break;
+                    }
+                    Err(error) => {
+                        println!("{}", serial_path.as_str());
+                        println!("Error: {}", error.to_string());
+                        println!("Please input serial path (e.g. /dev/ttyUSB0): ");
+                    }
+                }
+            }
+            Err(error) => {
+                println!("Error occurs: {:?}", error);
+                return;
+            }
+        }
+    }
     install_signal_hook();
     let (this_tx, thread_rx) = mpsc::channel::<String>();
     let (thread_tx, this_rx) = mpsc::channel::<BlePacket>();
     let thread_handle = thread::spawn(move || {
-        ble_sniffer::analyze_serial_packets("/dev/ttyUSB0", thread_tx, &thread_rx)
+        ble_sniffer::analyze_serial_packets(serial_path.as_str(), thread_tx, &thread_rx)
     });
     loop {
         thread::sleep(Duration::from_secs(1));
