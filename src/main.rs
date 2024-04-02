@@ -58,7 +58,7 @@ fn main() {
                     {
                         match result.ll_layer_data.non_conn_ind {
                             Some(non_conn_ind_msg) => {
-                                if mac_is_recorded(&recorded_macs, non_conn_ind_msg.advertising_mac)
+                                if mac_is_recorded(&recorded_macs, &non_conn_ind_msg.advertising_mac)
                                 {
                                     continue;
                                 }
@@ -153,7 +153,7 @@ fn get_mac_bytes_str(mac_bytes: [u8; 6]) -> String {
     )
 }
 
-fn mac_is_recorded(recorded_macs: &Vec<[u8; 6]>, check_mac: [u8; 6]) -> bool {
+fn mac_is_recorded(recorded_macs: &Vec<[u8; 6]>, check_mac: &[u8; 6]) -> bool {
     let mut byte_index: usize;
     for recorded_mac in recorded_macs {
         byte_index = 0;

@@ -4,14 +4,7 @@ use std::{
     time::Duration,
 };
 
-// Author: CYY 3/30/2024
-// Version: V1.0
 pub const SNIFFER_VERSION: &str = "V1.1";
-// Hardware: MCU: Nordic NRF52832 Board: RF-DG-32B
-// Firmware: j-link-ob-sam3u128-v2-nordicsemi-170724.bin
-// Firmware link: https://nsscprodmedia.blob.core.windows.net/prod/software-and-other-downloads/dev-kits/nrf5x-dk-files/j-link-ob-sam3u128-v2-nordicsemi-170724.bin
-// Bluetooth Core Specification version: v5.4
-// Bluetooth Core Specification link: https://www.bluetooth.com/specifications/core54-html/
 
 // UART protocol packet codes start (see sniffer_uart_protocol.pdf)
 pub const SLIP_START: u8 = 0xAB;
@@ -330,12 +323,22 @@ impl BlePacket {
             }
             byte_index += 1;
         }
+        result.valid = true;
         if result.ll_layer_data.pdu_type == ADV_TYPE_ADV_NONCONN_IND {
+            if mac_bytes_all_zero(&non_conn_ind_msg.advertising_mac) {
+                result.valid = false;
+            }
             result.ll_layer_data.non_conn_ind = Some(non_conn_ind_msg);
         } else if result.ll_layer_data.pdu_type == ADV_TYPE_SCAN_REQ {
+            if mac_bytes_all_zero(&scan_req_msg.advertising_mac)
+                && mac_bytes_all_zero(&scan_req_msg.scanning_mac)
+            {
+                result.valid = false;
+            }
             result.ll_layer_data.scan_req = Some(scan_req_msg);
+        } else {
+            result.valid = false;
         }
-        result.valid = true;
         result
     }
 }
@@ -411,14 +414,22 @@ pub fn analyze_serial_packets(serial_name: &str, tx: Sender<BlePacket>, rx: &Rec
                 match serial.write_all(send_bytes.as_slice()) {
                     Ok(_) => {}
                     Err(error) => {
-                        println!("Failed to send bytes to serial, {:?}", error);
+                        println!(
+                            "Failed to send bytes to serial {}, {}",
+                            serial_name,
+                            error.to_string()
+                        );
                     }
                 }
                 send_bytes = make_send_tk_bytes(0, send_packet_counter);
                 match serial.write_all(send_bytes.as_slice()) {
                     Ok(_) => {}
                     Err(error) => {
-                        println!("Failed to send bytes to serial, {:?}", error);
+                        println!(
+                            "Failed to send bytes to serial {}, {}",
+                            serial_name,
+                            error.to_string()
+                        );
                     }
                 }
                 thread::sleep(Duration::from_secs(1));
@@ -591,4 +602,14 @@ fn make_send_scan_bytes(
 fn make_send_tk_bytes(tk: u8, packet_counter: u16) -> Vec<u8> {
     let payload = [tk; 16];
     make_send_bytes(SET_TEMPORARY_KEY, &payload, packet_counter)
+}
+
+fn mac_bytes_all_zero(mac: &[u8; 6]) -> bool {
+    let mut zero_count = 0;
+    for mac_byte in mac {
+        if *mac_byte == 0 {
+            zero_count += 1;
+        }
+    }
+    zero_count == 6
 }
