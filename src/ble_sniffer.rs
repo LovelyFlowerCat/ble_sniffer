@@ -176,7 +176,6 @@ impl BlePacket {
         let mut byte_index = 0;
         let mut non_conn_ind_msg = BleLLNonConnIndMsg::new();
         let mut scan_req_msg = BleLLScanReqMsg::new();
-        let byte_arr = bytes.as_slice();
         for b in bytes {
             // Reference:
             // Bytes index < 16: Sniffer API Guide.pdf & sniffer_uart_protocol.txt
