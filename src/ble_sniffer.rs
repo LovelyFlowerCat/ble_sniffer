@@ -6,7 +6,7 @@ use std::{
 
 // Author: CYY 3/30/2024
 // Version: V1.0
-pub const SNIFFER_VERSION: &str = "V1.0";
+pub const SNIFFER_VERSION: &str = "V1.1";
 // Hardware: MCU: Nordic NRF52832 Board: RF-DG-32B
 // Firmware: j-link-ob-sam3u128-v2-nordicsemi-170724.bin
 // Firmware link: https://nsscprodmedia.blob.core.windows.net/prod/software-and-other-downloads/dev-kits/nrf5x-dk-files/j-link-ob-sam3u128-v2-nordicsemi-170724.bin
@@ -113,12 +113,22 @@ pub struct BleLinkLayer {
     pub channel_select: u8,
     pub tx_address_public: bool,
     pub rx_address_public: bool,
+    pub non_conn_ind: Option<BleLLNonConnIndMsg>,
+    pub scan_req: Option<BleLLScanReqMsg>,
+}
+
+pub struct BleLLNonConnIndMsg {
     pub advertising_mac: [u8; 6],
     pub advertising_types: Vec<u8>,
     pub flags: Option<BleLLDataFlags>,
     pub complete_local_name: Option<BleLLCompleteLocalName>,
     pub tx_power_level: Option<BleLLTxPowerLevel>,
     pub manufacturer_data: Option<BleLLManufacturerSpecificData>,
+}
+
+pub struct BleLLScanReqMsg {
+    pub scanning_mac: [u8; 6],
+    pub advertising_mac: [u8; 6],
 }
 
 pub struct BleLLDataFlags {
@@ -164,6 +174,9 @@ impl BlePacket {
         let mut result = BlePacket::new();
         let mut cache_bytes: Vec<u8> = Vec::new();
         let mut byte_index = 0;
+        let mut non_conn_ind_msg = BleLLNonConnIndMsg::new();
+        let mut scan_req_msg = BleLLScanReqMsg::new();
+        let byte_arr = bytes.as_slice();
         for b in bytes {
             // Reference:
             // Bytes index < 16: Sniffer API Guide.pdf & sniffer_uart_protocol.txt
@@ -230,77 +243,98 @@ impl BlePacket {
                 if ll_payload_len == 0 {
                     ll_payload_len = *b;
                     byte_index -= 1;
+                } else {
+                    if result.ll_layer_data.pdu_type == ADV_TYPE_SCAN_REQ && ll_payload_len != 12 {
+                        return result;
+                    }
                 }
             } else if byte_index >= 22 && byte_index <= 27 {
-                result.ll_layer_data.advertising_mac[27 - byte_index] = *b;
+                if result.ll_layer_data.pdu_type == ADV_TYPE_ADV_NONCONN_IND {
+                    non_conn_ind_msg.advertising_mac[27 - byte_index] = *b;
+                } else if result.ll_layer_data.pdu_type == ADV_TYPE_SCAN_REQ {
+                    scan_req_msg.scanning_mac[27 - byte_index] = *b;
+                }
                 ll_payload_index += 1;
             } else {
                 if ll_payload_index < ll_payload_len {
-                    if ll_payload_read_status == 0 {
-                        ll_payload_info_len = *b;
-                        ll_payload_info_index = 0;
-                        ll_payload_info_type = 0;
-                        ll_payload_read_status = 1;
-                        cache_bytes.clear();
-                    } else if ll_payload_read_status == 1 {
-                        ll_payload_info_type = *b;
-                        result.ll_layer_data.advertising_types.push(*b);
-                        ll_payload_read_status = 2;
-                        ll_payload_info_index += 1;
-                    } else if ll_payload_read_status == 2 {
-                        ll_payload_info_index += 1;
-                        if ll_payload_info_type == 0x01 {
-                            let flags = BleLLDataFlags {
-                                simultaneous_host: ((*b >> 4) & 1) == 1,
-                                simultaneous_controller: ((*b >> 3) & 1) == 1,
-                                br_edr_support: ((*b >> 2) & 1) == 1,
-                                le_general_discoverale: ((*b >> 1) & 1) == 1,
-                                le_limited_discoverable: (*b & 1) == 1,
-                            };
-                            result.ll_layer_data.flags = Some(flags);
-                        } else if ll_payload_info_type == 0x09 {
-                            cache_bytes.push(*b);
-                            if ll_payload_info_index == ll_payload_info_len {
-                                match String::from_utf8(cache_bytes.clone()) {
-                                    Ok(name) => {
-                                        let complete_local_name =
-                                            BleLLCompleteLocalName { device_name: name };
-                                        result.ll_layer_data.complete_local_name =
-                                            Some(complete_local_name);
-                                    }
-                                    Err(_) => {}
-                                }
-                            }
-                        } else if ll_payload_info_type == 0xff {
-                            cache_bytes.push(*b);
-                            if ll_payload_info_index == ll_payload_info_len {
-                                let mut cache_bytes_index = 0;
-                                let mut company_id: u16 = 0;
-                                let mut extra_data: Vec<u8> = Vec::new();
-                                for b in &cache_bytes {
-                                    if cache_bytes_index == 0 {
-                                        company_id |= *b as u16;
-                                    } else if cache_bytes_index == 1 {
-                                        company_id |= (*b as u16) << 8;
-                                    } else {
-                                        extra_data.push(*b);
-                                    }
-                                    cache_bytes_index += 1;
-                                }
-                                let manufacturer_data = BleLLManufacturerSpecificData {
-                                    company_id,
-                                    data: extra_data,
+                    if result.ll_layer_data.pdu_type == ADV_TYPE_ADV_NONCONN_IND {
+                        if ll_payload_read_status == 0 {
+                            ll_payload_info_len = *b;
+                            ll_payload_info_index = 0;
+                            ll_payload_info_type = 0;
+                            ll_payload_read_status = 1;
+                            cache_bytes.clear();
+                        } else if ll_payload_read_status == 1 {
+                            ll_payload_info_type = *b;
+                            non_conn_ind_msg.advertising_types.push(*b);
+                            ll_payload_read_status = 2;
+                            ll_payload_info_index += 1;
+                        } else if ll_payload_read_status == 2 {
+                            ll_payload_info_index += 1;
+                            if ll_payload_info_type == 0x01 {
+                                let flags = BleLLDataFlags {
+                                    simultaneous_host: ((*b >> 4) & 1) == 1,
+                                    simultaneous_controller: ((*b >> 3) & 1) == 1,
+                                    br_edr_support: ((*b >> 2) & 1) == 1,
+                                    le_general_discoverale: ((*b >> 1) & 1) == 1,
+                                    le_limited_discoverable: (*b & 1) == 1,
                                 };
-                                result.ll_layer_data.manufacturer_data = Some(manufacturer_data);
+                                non_conn_ind_msg.flags = Some(flags);
+                            } else if ll_payload_info_type == 0x09 {
+                                cache_bytes.push(*b);
+                                if ll_payload_info_index == ll_payload_info_len {
+                                    match String::from_utf8(cache_bytes.clone()) {
+                                        Ok(name) => {
+                                            let complete_local_name =
+                                                BleLLCompleteLocalName { device_name: name };
+                                            non_conn_ind_msg.complete_local_name =
+                                                Some(complete_local_name);
+                                        }
+                                        Err(_) => {}
+                                    }
+                                }
+                            } else if ll_payload_info_type == 0x0a {
+                                non_conn_ind_msg.tx_power_level =
+                                    Some(BleLLTxPowerLevel { tx_power_level: *b });
+                            } else if ll_payload_info_type == 0xff {
+                                cache_bytes.push(*b);
+                                if ll_payload_info_index == ll_payload_info_len {
+                                    let mut cache_bytes_index = 0;
+                                    let mut company_id: u16 = 0;
+                                    let mut extra_data: Vec<u8> = Vec::new();
+                                    for b1 in &cache_bytes {
+                                        if cache_bytes_index == 0 {
+                                            company_id |= *b1 as u16;
+                                        } else if cache_bytes_index == 1 {
+                                            company_id |= (*b1 as u16) << 8;
+                                        } else {
+                                            extra_data.push(*b1);
+                                        }
+                                        cache_bytes_index += 1;
+                                    }
+                                    let manufacturer_data = BleLLManufacturerSpecificData {
+                                        company_id,
+                                        data: extra_data,
+                                    };
+                                    non_conn_ind_msg.manufacturer_data = Some(manufacturer_data);
+                                }
+                            }
+                            if ll_payload_info_index == ll_payload_info_len {
+                                ll_payload_read_status = 0;
                             }
                         }
-                        if ll_payload_info_index == ll_payload_info_len {
-                            ll_payload_read_status = 0;
-                        }
+                    } else if result.ll_layer_data.pdu_type == ADV_TYPE_SCAN_REQ {
+                        scan_req_msg.advertising_mac[33 - byte_index] = *b;
                     }
+                    ll_payload_index += 1;
                 }
             }
             byte_index += 1;
+        }
+        if result.ll_layer_data.pdu_type == ADV_TYPE_ADV_NONCONN_IND {
+            result.ll_layer_data.non_conn_ind = Some(non_conn_ind_msg);
+        } else if result.ll_layer_data.pdu_type == ADV_TYPE_SCAN_REQ {
+            result.ll_layer_data.scan_req = Some(scan_req_msg);
         }
         result.valid = true;
         result
@@ -331,12 +365,30 @@ impl BleLinkLayer {
             channel_select: 0,
             tx_address_public: false,
             rx_address_public: false,
+            non_conn_ind: None,
+            scan_req: None,
+        }
+    }
+}
+
+impl BleLLNonConnIndMsg {
+    pub fn new() -> BleLLNonConnIndMsg {
+        BleLLNonConnIndMsg {
             advertising_mac: [0; 6],
             advertising_types: Vec::new(),
             flags: None,
             complete_local_name: None,
             tx_power_level: None,
             manufacturer_data: None,
+        }
+    }
+}
+
+impl BleLLScanReqMsg {
+    pub fn new() -> BleLLScanReqMsg {
+        BleLLScanReqMsg {
+            scanning_mac: [0; 6],
+            advertising_mac: [0; 6],
         }
     }
 }
@@ -370,7 +422,7 @@ pub fn analyze_serial_packets(serial_name: &str, tx: Sender<BlePacket>, rx: &Rec
                         println!("Failed to send bytes to serial, {:?}", error);
                     }
                 }
-                thread::sleep(Duration::from_secs(5));
+                thread::sleep(Duration::from_secs(1));
                 loop {
                     thread::sleep(Duration::from_secs(1));
                     if thread_should_stop(rx) {
