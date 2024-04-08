@@ -5,7 +5,7 @@ use std::{
 };
 
 pub const SNIFFER_VERSION: &str = "V1.1";
-
+pub const SNIFFER_BAUDRATE: u32 = 460800;
 // UART protocol packet codes start (see sniffer_uart_protocol.pdf)
 pub const SLIP_START: u8 = 0xAB;
 pub const SLIP_END: u8 = 0xBC;
@@ -396,7 +396,8 @@ impl BleLLScanReqMsg {
 }
 
 pub fn analyze_serial_packets(serial_name: &str, tx: Sender<BlePacket>, rx: &Receiver<String>) {
-    let mut recv_buffer: [u8; 1024] = [0; 1024];
+    const BUFFER_SIZE: usize = (SNIFFER_BAUDRATE / 10) as usize;
+    let mut recv_buffer: [u8; BUFFER_SIZE] = [0; BUFFER_SIZE];
     let mut packet_start = false;
     let mut previous_byte_is_esc = false;
     let mut packet_bytes: Vec<u8> = Vec::new();
@@ -406,7 +407,7 @@ pub fn analyze_serial_packets(serial_name: &str, tx: Sender<BlePacket>, rx: &Rec
         if thread_should_stop(rx) || stop_request {
             break;
         }
-        match serialport::new(serial_name, 460800).open() {
+        match serialport::new(serial_name, SNIFFER_BAUDRATE).open() {
             Ok(mut serial) => {
                 let mut send_packet_counter: u16 = 0;
                 let mut send_bytes = make_send_scan_bytes(false, false, false, send_packet_counter);
@@ -479,6 +480,12 @@ pub fn analyze_serial_packets(serial_name: &str, tx: Sender<BlePacket>, rx: &Rec
                         }
                         Err(error) => {
                             println!("Serial error occurs: {}", error.to_string());
+                        }
+                    }
+                    match serial.flush() {
+                        Ok(_) => {}
+                        Err(error) => {
+                            println!("Cannot flush serial, {}", error.to_string());
                         }
                     }
                 }
