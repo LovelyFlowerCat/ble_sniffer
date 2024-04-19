@@ -4,70 +4,126 @@ use std::{
     time::Duration,
 };
 
+#[allow(unused)]
 pub const SNIFFER_VERSION: &str = "V1.1";
+#[allow(unused)]
 pub const SNIFFER_BAUDRATE: u32 = 460800;
 // UART protocol packet codes start (see sniffer_uart_protocol.pdf)
+#[allow(unused)]
 pub const SLIP_START: u8 = 0xAB;
+#[allow(unused)]
 pub const SLIP_END: u8 = 0xBC;
+#[allow(unused)]
 pub const SLIP_ESC: u8 = 0xCD;
+#[allow(unused)]
 pub const SLIP_ESC_START: u8 = SLIP_START + 1;
+#[allow(unused)]
 pub const SLIP_ESC_END: u8 = SLIP_END + 1;
+#[allow(unused)]
 pub const SLIP_ESC_ESC: u8 = SLIP_ESC + 1;
 
+#[allow(unused)]
 pub const PROTOVER_V3: u8 = 3;
+#[allow(unused)]
 pub const PROTOVER_V2: u8 = 2;
+#[allow(unused)]
 pub const PROTOVER_V1: u8 = 1;
+#[allow(unused)]
 pub const HEADER_LENGTH: u8 = 6;
+#[allow(unused)]
 pub const REQ_FOLLOW: u8 = 0x00;
+#[allow(unused)]
 pub const EVENT_FOLLOW: u8 = 0x01;
+#[allow(unused)]
 pub const EVENT_PACKET_ADV_PDU: u8 = 0x02;
+#[allow(unused)]
 pub const EVENT_CONNECT: u8 = 0x05;
+#[allow(unused)]
 pub const EVENT_PACKET_DATA_PDU: u8 = 0x06;
+#[allow(unused)]
 pub const REQ_SCAN_CONT: u8 = 0x07;
+#[allow(unused)]
 pub const EVENT_DISCONNECT: u8 = 0x09;
+#[allow(unused)]
 pub const SET_TEMPORARY_KEY: u8 = 0x0C;
+#[allow(unused)]
 pub const PING_REQ: u8 = 0x0D;
+#[allow(unused)]
 pub const PING_RESP: u8 = 0x0E;
+#[allow(unused)]
 pub const SWITCH_BAUD_RATE_REQ: u8 = 0x13;
+#[allow(unused)]
 pub const SWITCH_BAUD_RATE_RESP: u8 = 0x14;
+#[allow(unused)]
 pub const SET_ADV_CHANNEL_HOP_SEQ: u8 = 0x17;
+#[allow(unused)]
 pub const SET_PRIVATE_KEY: u8 = 0x18;
+#[allow(unused)]
 pub const SET_LEGACY_LONG_TERM_KEY: u8 = 0x19;
+#[allow(unused)]
 pub const SET_SC_LONG_TERM_KEY: u8 = 0x1A;
+#[allow(unused)]
 pub const REQ_VERSION: u8 = 0x1B;
+#[allow(unused)]
 pub const RESP_VERSION: u8 = 0x1C;
+#[allow(unused)]
 pub const REQ_TIMESTAMP: u8 = 0x1D;
+#[allow(unused)]
 pub const RESP_TIMESTAMP: u8 = 0x1E;
+#[allow(unused)]
 pub const SET_IDENTITY_RESOLVING_KEY: u8 = 0x1F;
+#[allow(unused)]
 pub const GO_IDLE: u8 = 0xFE;
 // UART protocol packet codes end
 
 // Reference book: Bluetooth specification Core_v5.4
+#[allow(unused)]
 pub const PACKET_TYPE_UNKNOWN: u8 = 0x00;
+#[allow(unused)]
 pub const PACKET_TYPE_ADVERTISING: u8 = 0x01;
+#[allow(unused)]
 pub const PACKET_TYPE_DATA: u8 = 0x02;
 
+#[allow(unused)]
 pub const AUX_ADV_IND: u8 = 0;
+#[allow(unused)]
 pub const AUX_CHAIN_IND: u8 = 1;
+#[allow(unused)]
 pub const AUX_SYNC_IND: u8 = 2;
+#[allow(unused)]
 pub const AUX_SCAN_RSP: u8 = 3;
 
+#[allow(unused)]
 pub const ADV_TYPE_ADV_IND: u8 = 0x0;
+#[allow(unused)]
 pub const ADV_TYPE_ADV_DIRECT_IND: u8 = 0x1;
+#[allow(unused)]
 pub const ADV_TYPE_ADV_NONCONN_IND: u8 = 0x2;
+#[allow(unused)]
 pub const ADV_TYPE_ADV_SCAN_IND: u8 = 0x6;
+#[allow(unused)]
 pub const ADV_TYPE_SCAN_REQ: u8 = 0x3;
+#[allow(unused)]
 pub const ADV_TYPE_SCAN_RSP: u8 = 0x4;
+#[allow(unused)]
 pub const ADV_TYPE_CONNECT_REQ: u8 = 0x5;
+#[allow(unused)]
 pub const ADV_TYPE_ADV_EXT_IND: u8 = 0x7;
 
+#[allow(unused)]
 pub const PHY_1M: u8 = 0;
+#[allow(unused)]
 pub const PHY_2M: u8 = 1;
+#[allow(unused)]
 pub const PHY_CODED: u8 = 2;
 
+#[allow(unused)]
 pub const PHY_CODED_CI_S8: u8 = 0;
+#[allow(unused)]
 pub const PHY_CODED_CI_S2: u8 = 1;
 
+#[allow(unused)]
+#[derive(Debug)]
 pub struct BlePacket {
     pub valid: bool,
     pub protocol_version: u8,
@@ -77,6 +133,8 @@ pub struct BlePacket {
     pub ll_layer_data: BleLinkLayer,
 }
 
+#[allow(unused)]
+#[derive(Debug)]
 pub struct BlePacketHeader {
     pub protocol_version: u8,
     pub crc_ok: bool,
@@ -89,17 +147,23 @@ pub struct BlePacketHeader {
     pub delta_time_us: u32,
 }
 
+#[allow(unused)]
+#[derive(Debug)]
 pub struct BlePacketHeaderAdv {
     aux_type: u8,
     address_resolved: bool,
 }
 
+#[allow(unused)]
+#[derive(Debug)]
 pub struct BlePacketHeaderData {
     direction_to_slave: bool,
     encrypted: bool,
     mic_ok: bool,
 }
 
+#[allow(unused)]
+#[derive(Debug)]
 pub struct BleLinkLayer {
     pub access_address: u32,
     pub pdu_type: u8,
@@ -110,6 +174,8 @@ pub struct BleLinkLayer {
     pub scan_req: Option<BleLLScanReqMsg>,
 }
 
+#[allow(unused)]
+#[derive(Debug)]
 pub struct BleLLNonConnIndMsg {
     pub advertising_mac: [u8; 6],
     pub advertising_types: Vec<u8>,
@@ -119,11 +185,15 @@ pub struct BleLLNonConnIndMsg {
     pub manufacturer_data: Option<BleLLManufacturerSpecificData>,
 }
 
+#[allow(unused)]
+#[derive(Debug)]
 pub struct BleLLScanReqMsg {
     pub scanning_mac: [u8; 6],
     pub advertising_mac: [u8; 6],
 }
 
+#[allow(unused)]
+#[derive(Debug)]
 pub struct BleLLDataFlags {
     pub simultaneous_host: bool,
     pub simultaneous_controller: bool,
@@ -132,14 +202,20 @@ pub struct BleLLDataFlags {
     pub le_limited_discoverable: bool,
 }
 
+#[allow(unused)]
+#[derive(Debug)]
 pub struct BleLLCompleteLocalName {
     pub device_name: String,
 }
 
+#[allow(unused)]
+#[derive(Debug)]
 pub struct BleLLTxPowerLevel {
     pub tx_power_level: u8,
 }
 
+#[allow(unused)]
+#[derive(Debug)]
 pub struct BleLLManufacturerSpecificData {
     pub company_id: u16,
     pub data: Vec<u8>,
@@ -435,7 +511,7 @@ pub fn analyze_serial_packets(serial_name: &str, tx: Sender<BlePacket>, rx: &Rec
                 }
                 thread::sleep(Duration::from_secs(1));
                 loop {
-                    thread::sleep(Duration::from_secs(1));
+                    thread::sleep(Duration::from_millis(100));
                     if thread_should_stop(rx) {
                         stop_request = true;
                         break;
@@ -482,10 +558,10 @@ pub fn analyze_serial_packets(serial_name: &str, tx: Sender<BlePacket>, rx: &Rec
                             println!("Serial error occurs: {}", error.to_string());
                         }
                     }
-                    match serial.flush() {
+                    match serial.clear(serialport::ClearBuffer::Input) {
                         Ok(_) => {}
                         Err(error) => {
-                            println!("Cannot flush serial, {}", error.to_string());
+                            println!("Cannot clear serial inputs, {}", error.to_string());
                         }
                     }
                 }
@@ -518,6 +594,7 @@ fn thread_should_stop(rx: &Receiver<String>) -> bool {
     result
 }
 
+#[allow(unused)]
 pub fn get_packet_bytes(bytes: Vec<u8>) -> (Vec<Vec<u8>>, usize) {
     let mut packet_list: Vec<Vec<u8>> = Vec::new();
     let mut packet_bytes: Vec<u8> = Vec::new();
@@ -554,6 +631,7 @@ pub fn get_packet_bytes(bytes: Vec<u8>) -> (Vec<Vec<u8>>, usize) {
     (packet_list, read_index)
 }
 
+#[allow(unused)]
 fn print_hex_bytes(bytes: &Vec<u8>) {
     for b in bytes {
         print!("0x{:X},", b);
